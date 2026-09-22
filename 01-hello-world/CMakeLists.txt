@@ -42,8 +42,8 @@ find_package(OpenGL REQUIRED)
 # ----------------------------------------------------------------------------------------
 set(LIBRARY_NAME tutorial)
 add_library(${LIBRARY_NAME} STATIC
-  "${CMAKE_SOURCE_DIR}/src/lib/hello-world.cc"
-  "${CMAKE_SOURCE_DIR}/src/lib/hello-world.h"
+  "${CMAKE_SOURCE_DIR}/src/lib/render.cc"
+  "${CMAKE_SOURCE_DIR}/src/lib/render.h"
 )
 target_link_libraries(${LIBRARY_NAME} PUBLIC
   glfw
