@@ -14,3 +14,8 @@ Simple template built with imgui.
 Minimal file explorer built with imgui.
 
 [file-explorer](02-file-explorer)
+
+### 3. Function plotter with imgui
+Function plotter built with imgui.
+
+[function-plotter](03-function-plotter)
