@@ -19,3 +19,8 @@ Minimal file explorer built with imgui.
 Function plotter built with imgui.
 
 [function-plotter](03-function-plotter)
+
+### 4. Text editor with imgui
+Text editor built with imgui.
+
+[text-editor](04-text-editor)
