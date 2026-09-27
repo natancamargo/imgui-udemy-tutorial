@@ -29,3 +29,8 @@ Text editor built with imgui.
 Diff viewer built with imgui.
 
 [diff-viewer](05-diff-viewer)
+
+### 6. Paint tool with imgui
+Paint tool built with imgui.
+
+[paint-tool](06-paint-tool)
