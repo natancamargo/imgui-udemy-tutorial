@@ -24,3 +24,8 @@ Function plotter built with imgui.
 Text editor built with imgui.
 
 [text-editor](04-text-editor)
+
+### 5. Diff viewer with imgui
+Diff viewer built with imgui.
+
+[diff-viewer](05-diff-viewer)
