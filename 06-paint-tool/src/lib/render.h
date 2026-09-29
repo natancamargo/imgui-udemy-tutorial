@@ -41,8 +41,10 @@ private:
 
   void drawMenu();  
   void drawMenuSavePopup();  
-  void drawMenuReadPopup();  
+  void drawMenuReadPopup();
   void drawCanvas();
+  void drawControls();  
+  void drawSizeSettings();  
   void drawColorButtons();  
   void saveToImageFile(std::string_view filename);
   void loadFromImageFile(std::string_view filename);
