@@ -1,9 +1,13 @@
+#include <cstddef>
+#include <cstring>
+#include <fstream>
 #include <iostream>
 
 #include <fmt/format.h>
 #include <imgui.h>
 #include <implot.h>
 #include <memory>
+#include <tuple>
 
 #include "render.h"
 
@@ -33,9 +37,11 @@ void WindowClass::drawMenu() {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Save", "Ctrl+s") || (ctrl_pressed && s_pressed)) {
         ImGui::OpenPopup("Save File");
+        saveOpen = true;
       }
       if (ImGui::MenuItem("Read", "Ctrl+o") || (ctrl_pressed && o_pressed)) {
         ImGui::OpenPopup("Read File");
+        readOpen = true;
       }
       if (ImGui::MenuItem("Clear")) {
         clearCanvas();
@@ -54,7 +60,35 @@ void WindowClass::drawMenu() {
   drawMenuSavePopup();
   drawMenuReadPopup();
 }
-void WindowClass::drawCanvas() {}
+void WindowClass::drawCanvas() {
+  canvasPos = ImGui::GetCursorPos();
+  const float borderThickness = 1.5F;
+  const ImVec2 buttonSize = ImVec2(canvasSize.x + 2.0F * borderThickness,
+                                   canvasSize.y + 2.0F * borderThickness);
+  ImGui::InvisibleButton("##canvas", buttonSize);
+
+  const ImVec2 mousePos = ImGui::GetMousePos();
+  const bool isHovering = ImGui::IsItemHovered();
+  if (isHovering && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    const ImVec2 point = ImVec2(mousePos.x - canvasPos.x - borderThickness,
+                                mousePos.y - canvasPos.y - borderThickness);
+    points.push_back(std::make_tuple(point, drawColor, drawSize));
+    std::cout << "here";
+  }
+
+  ImDrawList *drawList = ImGui::GetWindowDrawList();
+
+  for (const auto &[point, color, size] : points) {
+    const ImVec2 pos = ImVec2(canvasPos.x + borderThickness + point.x,
+                              canvasPos.y + borderThickness + point.y);
+    drawList->AddCircleFilled(pos, size, color);
+  }
+
+  const ImVec2 border_min = canvasPos;
+  const auto border_max = ImVec2(canvasPos.x + buttonSize.x - borderThickness,
+                                 canvasPos.y + buttonSize.y - borderThickness);
+  drawList->AddRect(border_min, border_max, IM_COL32(255, 255, 255, 255));
+}
 void WindowClass::drawControls() {
   ImGui::SeparatorText("Controls");
   drawColorButtons();
@@ -126,10 +160,10 @@ void WindowClass::drawColorButtons() {
   }
   if (ImGui::Button("Choose")) {
     ImGui::OpenPopup("Color Picker");
-    if (ImGui::BeginPopup("Color Picker")) {
-      ImGui::ColorPicker3("##Color", reinterpret_cast<float *>(&drawColor));
-      ImGui::EndPopup();
-    }
+  }
+  if (ImGui::BeginPopup("Color Picker")) {
+    ImGui::ColorPicker3("##Color", reinterpret_cast<float *>(&drawColor));
+    ImGui::EndPopup();
   }
   if (none_preset_color) {
     ImGui::PopStyleColor();
@@ -139,17 +173,22 @@ void WindowClass::drawSizeSettings() {
   ImGui::Text("Draw Size");
   ImGui::SameLine(120);
   ImGui::PushItemWidth(canvasSize.x - ImGui::GetCursorPosX());
-  ImGui::SliderFloat("##drawSize", &pointDrawSize, 1.0F, 10.0F);
+  ImGui::SliderFloat("##drawSize", &drawSize, 1.0F, 10.0F);
   ImGui::PopItemWidth();
 }
 void WindowClass::drawMenuSavePopup() {
   const bool esc_pressed = ImGui::IsKeyPressed(ImGuiKey_Escape);
 
-  static char saveFileNameBuffer[256] = "text.txt";
+  static char saveFileNameBuffer[256];
+  std::memcpy(saveFileNameBuffer, filenameBuffer, sizeof(saveFileNameBuffer));
 
   ImGui::SetNextWindowSize(popupSize);
   ImGui::SetNextWindowPos(popupPos);
-  if (ImGui::BeginPopupModal("Save File", nullptr, popupFlags)) {
+  if (ImGui::Button("Test")) {
+    saveOpen = true;
+    ImGui::OpenPopup("Save File");    
+  }    
+  if (ImGui::BeginPopupModal("Save File", &saveOpen, popupFlags)) {
 
     ImGui::InputText("Filename", saveFileNameBuffer,
                      sizeof(saveFileNameBuffer));
@@ -163,6 +202,7 @@ void WindowClass::drawMenuSavePopup() {
 
     if (ImGui::Button("Cancel", popupButtonSize) || esc_pressed) {
       ImGui::CloseCurrentPopup();
+      saveOpen = false;
     }
 
     ImGui::EndPopup();
@@ -171,7 +211,8 @@ void WindowClass::drawMenuSavePopup() {
 void WindowClass::drawMenuReadPopup() {
   const bool esc_pressed = ImGui::IsKeyPressed(ImGuiKey_Escape);
 
-  static char readFileNameBuffer[256] = "text.txt";
+  static char readFileNameBuffer[256];
+  std::memcpy(readFileNameBuffer, filenameBuffer, sizeof(readFileNameBuffer));
 
   ImGui::SetNextWindowSize(popupSize);
   ImGui::SetNextWindowPos(
@@ -179,7 +220,7 @@ void WindowClass::drawMenuReadPopup() {
              ImGui::GetIO().DisplaySize.y / 2.0F - popupSize.y / 2.0F)
 
   );
-  if (ImGui::BeginPopupModal("Read File", nullptr, popupFlags)) {
+  if (ImGui::BeginPopupModal("Read File", &readOpen, popupFlags)) {
 
     ImGui::InputText("Filename", readFileNameBuffer,
                      sizeof(readFileNameBuffer));
@@ -193,14 +234,54 @@ void WindowClass::drawMenuReadPopup() {
 
     if (ImGui::Button("Cancel", popupButtonSize) || esc_pressed) {
       ImGui::CloseCurrentPopup();
+      readOpen = false;      
     }
 
     ImGui::EndPopup();
   }
 }
 
-void WindowClass::saveToImageFile(std::string_view filename) {}
-void WindowClass::loadFromImageFile(std::string_view filename) {}
-void WindowClass::clearCanvas() {}
+void WindowClass::saveToImageFile(std::string_view filename) {
+  std::ofstream out = std::ofstream{filename.data()};
+
+  if (!out || !out.is_open()) {
+    return;
+  }
+
+  const std::size_t pointCount = points.size();
+  out.write(reinterpret_cast<const char *>(&pointCount), sizeof(pointCount));
+
+  for (const auto &[point, color, size] : points) {
+    out.write(reinterpret_cast<const char *>(&point), sizeof(point));
+    out.write(reinterpret_cast<const char *>(&color), sizeof(color));
+    out.write(reinterpret_cast<const char *>(&size), sizeof(size));
+  }
+
+  out.close();
+}
+void WindowClass::loadFromImageFile(std::string_view filename) {
+  std::ifstream in = std::ifstream{filename.data(), std::ios::binary};
+
+  if (!in || !in.is_open()) {
+    return;
+  }
+
+  std::size_t pointCount = points.size();
+  in.read(reinterpret_cast<char *>(&pointCount), sizeof(pointCount));
+
+  for (std::size_t i; i < points.size(); i++) {
+    ImVec2 point;
+    ImColor color;
+    float size;
+    in.read(reinterpret_cast<char *>(&point), sizeof(point));
+    in.read(reinterpret_cast<char *>(&color), sizeof(color));
+    in.read(reinterpret_cast<char *>(&size), sizeof(size));
+
+    points.push_back(std::make_tuple(point, color, size));
+  }
+
+  in.close();
+}
+void WindowClass::clearCanvas() { points.clear(); }
 
 void render(WindowClass &window_obj) { window_obj.draw("Label"); }

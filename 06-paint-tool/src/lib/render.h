@@ -20,7 +20,7 @@ public:
   
   WindowClass()
       : points({}), canvasPos({}), drawColor(ImColor(255, 255, 255)),
-        pointDrawSize(2.0F), filenameBuffer("test.bin") {}
+        drawSize(2.0F), filenameBuffer("test.bin") {}
 
   void draw(std::string_view label);
 
@@ -35,8 +35,11 @@ private:
   ImVec2 canvasPos;
 
   ImColor drawColor;
-  float pointDrawSize;
+  float drawSize;
 
+  bool saveOpen = false;
+  bool readOpen = false;
+  
   char filenameBuffer[256];
 
   void drawMenu();  
