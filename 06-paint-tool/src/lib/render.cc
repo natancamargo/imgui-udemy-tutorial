@@ -36,12 +36,10 @@ void WindowClass::drawMenu() {
   if (ImGui::BeginMenuBar()) {
     if (ImGui::BeginMenu("File")) {
       if (ImGui::MenuItem("Save", "Ctrl+s") || (ctrl_pressed && s_pressed)) {
-        ImGui::OpenPopup("Save File");
-        saveOpen = true;
+        saveOpenTrigger = true;
       }
       if (ImGui::MenuItem("Read", "Ctrl+o") || (ctrl_pressed && o_pressed)) {
-        ImGui::OpenPopup("Read File");
-        readOpen = true;
+        readOpenTrigger = true;
       }
       if (ImGui::MenuItem("Clear")) {
         clearCanvas();
@@ -184,10 +182,11 @@ void WindowClass::drawMenuSavePopup() {
 
   ImGui::SetNextWindowSize(popupSize);
   ImGui::SetNextWindowPos(popupPos);
-  if (ImGui::Button("Test")) {
+  if (saveOpenTrigger) {
+    ImGui::OpenPopup("Save File");
     saveOpen = true;
-    ImGui::OpenPopup("Save File");    
-  }    
+    saveOpenTrigger = false;
+  }
   if (ImGui::BeginPopupModal("Save File", &saveOpen, popupFlags)) {
 
     ImGui::InputText("Filename", saveFileNameBuffer,
@@ -220,6 +219,11 @@ void WindowClass::drawMenuReadPopup() {
              ImGui::GetIO().DisplaySize.y / 2.0F - popupSize.y / 2.0F)
 
   );
+  if (readOpenTrigger) {
+    ImGui::OpenPopup("Read File");
+    readOpen = true;
+    readOpenTrigger = false;
+  }
   if (ImGui::BeginPopupModal("Read File", &readOpen, popupFlags)) {
 
     ImGui::InputText("Filename", readFileNameBuffer,
@@ -234,7 +238,7 @@ void WindowClass::drawMenuReadPopup() {
 
     if (ImGui::Button("Cancel", popupButtonSize) || esc_pressed) {
       ImGui::CloseCurrentPopup();
-      readOpen = false;      
+      readOpen = false;
     }
 
     ImGui::EndPopup();
@@ -269,7 +273,7 @@ void WindowClass::loadFromImageFile(std::string_view filename) {
   std::size_t pointCount = points.size();
   in.read(reinterpret_cast<char *>(&pointCount), sizeof(pointCount));
 
-  for (std::size_t i; i < points.size(); i++) {
+  for (std::size_t i = 0; i < pointCount; i++) {
     ImVec2 point;
     ImColor color;
     float size;

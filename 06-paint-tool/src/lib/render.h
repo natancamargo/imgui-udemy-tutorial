@@ -37,7 +37,9 @@ private:
   ImColor drawColor;
   float drawSize;
 
+  bool saveOpenTrigger = false;
   bool saveOpen = false;
+  bool readOpenTrigger = false;
   bool readOpen = false;
   
   char filenameBuffer[256];
